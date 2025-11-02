@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <title>مسابقة الرياضيات التفاعلية</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: url('images/background.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            text-align: right;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 14px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+            width: 92%;
+            max-width: 920px;
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 18px;
+            position: relative;
+            align-items: start;
+        }
+.question img {
+    width: 70% !important;  /* يجبر المتصفح على تكبير الصورة */
+    max-width: 800px !important;  /* يسمح بحجم أكبر */
+    display: block;
+margin: 20px 10% 20px auto;
+}
+        .header {
+            font-size: 26px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 6px;
+            text-align: center;
+            grid-column: 1 / -1;
+        }
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+        .action-btn {
+            background: #4a6baf;
+            color: white;
+            border: none;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.18s;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+            text-align: center;
+            font-size: 14px;
+            width: 100%;
+        }
+        .action-btn:hover { transform: translateY(-3px); }
+        .action-btn:disabled { background:#cccccc; cursor:not-allowed; transform:none; box-shadow:none; }
+        .help-message { color:#e67e22; font-size:13px; height:18px; text-align:center; }
+        #current-score { font-weight:bold; color:#2c3e50; background:#eaf7ea; padding:6px 12px; border-radius:20px; text-align:center; }
+        #timer { font-size:20px; font-weight:bold; padding:6px 10px; border-radius:20px; display:inline-block; text-align:center; }
+        .question-container { padding: 0 10px; }
+        .progress-container { width:100%; background:#e9ecef; border-radius:10px; overflow:hidden; height:22px; margin-bottom:8px; }
+        .progress-bar { height:100%; width:0%; background:linear-gradient(90deg,#4CAF50 0%,#8BC34A 100%); transition:width .5s; text-align:center; color:white; font-weight:bold; font-size:13px; line-height:22px; }
+        .question { margin-top:6px; display:flex; gap:12px; align-items:center; justify-content:flex-end; }
+        .question img { max-width: 60%; height: auto; max-height: 160px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.08); object-fit:contain; }
+        .options { list-style:none; padding:0; margin:18px 0 0 0; display:grid; grid-template-columns:repeat(2,1fr); gap:16px; }
+        .options li { cursor:pointer; transition:all .18s; background:#fbfbfd; padding:12px; border-radius:10px; box-shadow:0 3px 8px rgba(0,0,0,0.06); border:2px solid #eef0f3; text-align:center; min-height:110px; display:flex; align-items:center; justify-content:center; }
+        .options li:hover { transform:scale(1.03); box-shadow:0 8px 20px rgba(0,0,0,0.12); border-color:#4a6baf; }
+        .options li img { max-width:100%; max-height:100%; object-fit:contain; }
+        .options li.disabled-option { opacity:0.35; pointer-events:none; cursor:not-allowed; transform:none; }
+        .message { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,0.9); color: white; padding: 26px; border-radius: 12px; font-size: 22px; font-weight: bold; text-align: center; display:none; z-index: 2000; width:85%; max-width:620px; box-shadow:0 10px 30px rgba(0,0,0,0.5); }
+        .correct { color:#4CAF50; }
+        .wrong { color:#e74c3c; }
+        /* small screens */
+        @media (max-width:800px){
+            .container { grid-template-columns: 1fr; padding:14px; }
+            .sidebar { flex-direction:row; flex-wrap:wrap; justify-content:center; gap:8px; }
+            .question img { max-width:60%; }
+            .options { grid-template-columns:1fr; }
+            .options li { min-height:80px; }
+            .progress-bar { font-size:12px; }
+        }
+
+        /* Circular timer styling container */
+        .timer-wrap { display:flex; gap:8px; align-items:center; justify-content:center; flex-direction:column; }
+        .circle-timer { width:68px; height:68px; position:relative; }
+        .circle-timer svg { transform: rotate(-90deg); width:100%; height:100%; }
+        .circle-label { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:14px; }
+        /* entrance animations */
+        .fade-in { animation: fadeIn .28s ease both; }
+        @keyframes fadeIn { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform:none; } }
+    </style>
+</head>
+<body>
+    <div class="container fade-in" id="app">
+        <div class="header">مسابقة الرياضيات التفاعلية 🧮</div>
+
+        <div class="sidebar">
+            <button class="action-btn" onclick="useFiftyFifty()" id="fiftyBtn">مساعدة 50/50 (-0.5)</button>
+            <button class="action-btn" onclick="skipQuestion()" id="skipBtn">تخطي السؤال (-0.5)</button>
+            <button class="action-btn" onclick="showLeaderboard()">المتصدرون 🏆</button>
+            <div class="help-message" id="helpMessage"></div>
+
+            <div id="current-score">النقاط: 5.0</div>
+
+            <div class="timer-wrap" title="الوقت المتبقي">
+                <div id="timer" style="display:none;">60</div>
+                <div class="circle-timer" aria-hidden="true">
+                    <svg id="timer-svg" viewBox="0 0 100 100" role="img" aria-label="مؤقت">
+                        <defs>
+                            <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#4CAF50" />
+                                <stop offset="100%" stop-color="#4CAF50" />
+                            </linearGradient>
+                        </defs>
+                        <circle cx="50" cy="50" r="44" stroke="#eee" stroke-width="8" fill="none"></circle>
+                        <circle id="timer-circle" cx="50" cy="50" r="44" stroke="url(#grad)" stroke-width="8" stroke-linecap="round" fill="none" stroke-dasharray="276.46" stroke-dashoffset="0"></circle>
+                    </svg>
+                    <div class="circle-label" id="circle-label">60</div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="question-container">
+            <div class="progress-container">
+                <div class="progress-bar" id="progress-bar">0%</div>
+            </div>
+
+            <div id="question-counter">السؤال 1 من 10</div>
+            <div class="question" id="question"></div>
+            <ul class="options" id="options"></ul>
+        </div>
+    </div>
+
+    <div class="message" id="message"></div>
+
+    <audio id="correct-sound" src="sounds/success.mp3"></audio>
+    <audio id="wrong-sound" src="sounds/error.mp3"></audio>
+    <audio id="thinking-sound" src="sounds/thinking.mp3"></audio>
+    <audio id="tick-sound" src="sounds/tick.mp3"></audio>
+
+    <script>
+        /* ==========  إعداد الأسئلة و المسارات ========== */
+        const TOTAL_QUESTIONS_POOL = 78; // عدد عناصر الأسئلة المتوفرة في المجلد q/
+        let allQuestions = Array.from({length: TOTAL_QUESTIONS_POOL}, (_, i) => {
+            const n = i + 1;
+            return {
+                id: n,
+                questionImage: `q/question${n}.png`,
+                options: [
+                    `answers/q${n}_answer1.png`,
+                    `answers/q${n}_answer2.png`,
+                    `answers/q${n}_answer3.png`,
+                    `answers/q${n}_answer4.png`
+                ],
+                correctIndex: 0 // الإجابة الصحيحة دائمًا الخيار الأول في البيانات المصدرية كما في طلبك
+            };
+        });
+
+        /* ===== متغيرات اللعبة العامة ===== */
+        let questions = []; // 10 أسئلة للجولة الحالية
+        let availableQuestions = []; // أسئلة لم تُستخدم بعد عبر الجولات
+        let currentQuestion = 0;
+        let helpUsed = false;
+        let disabledOptions = [];
+        let timeLeft = 60;
+        let timerInterval = null;
+        let gameStartTime = 0;
+        let questionStartTime = 0;
+        let currentShuffledOptions = []; // خرائط للإجابات المعروضة
+        let currentCorrectIndex = null; // index داخل ال-shuffled options
+        let audioUnlocked = false; // لتجاوز سياسة المتصفحات: نفعل التشغيل بعد أول تفاعل المستخدم
+
+        /* ===== عناصر DOM ===== */
+        const progressBarEl = document.getElementById('progress-bar');
+        const questionEl = document.getElementById('question');
+        const optionsEl = document.getElementById('options');
+        const messageEl = document.getElementById('message');
+        const scoreEl = document.getElementById('current-score');
+        const fiftyBtn = document.getElementById('fiftyBtn');
+        const helpMessageEl = document.getElementById('helpMessage');
+        const circleLabelEl = document.getElementById('circle-label');
+        const timerCircle = document.getElementById('timer-circle');
+        const timerSVG = document.getElementById('timer-svg');
+
+        /* ===== إعدادات اللعب ===== */
+        const QUESTIONS_PER_GAME = 10;
+        const START_SCORE = 5.0;
+        const TIME_PER_QUESTION = 60; // ثانية
+        const FAST_THRESHOLD = 30; // خلال 30 ثانية = سريع (+2)
+        const FIFTY_COST = 0.5;
+        const SKIP_COST = 0.5;
+
+        /* ===== دوال مساعدة ===== */
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function preloadImages() {
+            allQuestions.forEach(q => {
+                const iq = new Image(); iq.src = q.questionImage;
+                q.options.forEach(src => { const im = new Image(); im.src = src; });
+            });
+        }
+
+        /* ========== إدارة الأسئلة المستخدمة بين الجولات ========== */
+        function loadAvailableQuestionsFromStorage() {
+            let used = JSON.parse(localStorage.getItem('usedQuestions')) || [];
+            // إذا استُهلكت جميع الأسئلة، نعيد تعيين السجل
+            if (used.length >= allQuestions.length) {
+                used = [];
+                localStorage.setItem('usedQuestions', JSON.stringify([]));
+            }
+            // available = كل الأسئلة التي لم تُستخدم بعد
+            availableQuestions = allQuestions.filter(q => !used.includes(q.id));
+        }
+
+        /* ========== تهيئة اللعبة ======== */
+        function initGame() {
+            // تفعيل تحميل الصور مسبقًا
+            preloadImages();
+
+            // تهيئة scoreboard و usedQuestions
+            loadAvailableQuestionsFromStorage();
+            questions = [];
+
+            // نختار QUESTIONS_PER_GAME عشوائيًا من availableQuestions
+            const temp = [...availableQuestions];
+            for (let i = 0; i < Math.min(QUESTIONS_PER_GAME, temp.length); i++) {
+                const idx = Math.floor(Math.random() * temp.length);
+                questions.push(temp[idx]);
+                // سنقوم بوضعها في سجل المستخدمين كي لا تُستخدم مرة أخرى عبر جولات لاحقة
+                const used = JSON.parse(localStorage.getItem('usedQuestions')) || [];
+                used.push(temp[idx].id);
+                localStorage.setItem('usedQuestions', JSON.stringify(used));
+                // ونزيلها من temp و from availableQuestions
+                temp.splice(idx, 1);
+            }
+
+            // تحديث availableQuestions (بقية الأسئلة غير المستخدمة)
+            loadAvailableQuestionsFromStorage();
+
+            // إعداد النقاط المبدئية
+            localStorage.setItem('quizScore', START_SCORE.toFixed(1));
+            updateScoreDisplay();
+
+            currentQuestion = 0;
+            gameStartTime = Date.now();
+            // تحميل السؤال الأول
+            loadQuestion();
+        }
+
+        /* ===== شريط التقدم ===== */
+        function updateProgress() {
+            const progress = ((currentQuestion) / questions.length) * 100;
+            progressBarEl.style.width = progress + '%';
+            progressBarEl.textContent = Math.round(progress) + '%';
+            document.getElementById("question-counter").textContent = `السؤال ${currentQuestion + 1} من ${questions.length}`;
+        }
+
+        /* ===== المؤقت الدائري ===== */
+        const FULL_DASH_ARRAY = 2 * Math.PI * 44; // 2πr where r = 44
+        timerCircle.style.strokeDasharray = FULL_DASH_ARRAY;
+        function setCircleTimeFraction(timeLeftSec) {
+            const fraction = timeLeftSec / TIME_PER_QUESTION;
+            const offset = FULL_DASH_ARRAY * (1 - fraction);
+            timerCircle.style.strokeDashoffset = offset;
+        }
+        function setTimerColor(seconds) {
+            // أخضر 60-30، أصفر 30-10، أحمر 10-0 مع انتقال ناعم
+            const circle = timerCircle;
+            if (seconds > 30) {
+                // أخضر
+                circle.style.stroke = 'url(#grad)';
+                // adjust gradient stops
+                timerSVG.querySelector('stop').setAttribute('stop-color', '#4CAF50');
+                timerSVG.querySelectorAll('stop')[1].setAttribute('stop-color', '#4CAF50');
+            } else if (seconds > 10) {
+                timerSVG.querySelector('stop').setAttribute('stop-color', '#f1c40f');
+                timerSVG.querySelectorAll('stop')[1].setAttribute('stop-color', '#f1c40f');
+                circle.style.stroke = 'url(#grad)';
+            } else {
+                timerSVG.querySelector('stop').setAttribute('stop-color', '#e74c3c');
+                timerSVG.querySelectorAll('stop')[1].setAttribute('stop-color', '#e74c3c');
+                circle.style.stroke = 'url(#grad)';
+            }
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timeLeft = TIME_PER_QUESTION;
+            updateTimerUI();
+            setCircleTimeFraction(timeLeft);
+            setTimerColor(timeLeft);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerUI();
+                setCircleTimeFraction(timeLeft);
+                setTimerColor(timeLeft);
+
+                // أصوات التكتكة عندما يبقى أقل من 10 أو  <=10
+                if (timeLeft <= 10 && timeLeft > 0) {
+                    const tick = document.getElementById('tick-sound');
+                    tick.currentTime = 0;
+                    // تسرّع الصوت عندما النتيجة أقل من 5
+                    tick.playbackRate = timeLeft <= 5 ? 1.5 : 1.0;
+                    safePlayAudio(tick);
+                }
+
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    // يعتبر فشل في الإجابة
+                    checkAnswer(false, true); // مرّت المدة بدون إجابة
+                }
+            }, 1000);
+        }
+
+        function updateTimerUI() {
+            circleLabelEl.textContent = timeLeft;
+            // لا نعرض العنصر النصي العادي إلا للقراءة الآلية إن لزم
+            document.getElementById('timer').textContent = timeLeft;
+        }
+
+        /* ===== تحميل السؤال الحالي والعرض ===== */
+        function loadQuestion() {
+            // إعادة تعيين القيم
+            helpUsed = false;
+            disabledOptions = [];
+            fiftyBtn.disabled = false;
+            helpMessageEl.textContent = "";
+            // إيقاف أي صوت تفكير سابق
+            const thinking = document.getElementById('thinking-sound');
+            thinking.pause();
+            thinking.currentTime = 0;
+
+            // عنصر السؤال
+            const q = questions[currentQuestion];
+            if (!q) {
+                // إن لم توجد أسئلة أكثر، أنهِ اللعبة
+                endGame();
+                return;
+            }
+
+            // إعداد صور السؤال والإجابات (عرض بترتيب عشوائي، مع الاحتفاظ بمعرفة أيها الصحيح)
+            const shuffledOptions = shuffleArray([...q.options]);
+            currentShuffledOptions = shuffledOptions;
+            currentCorrectIndex = shuffledOptions.indexOf(q.options[q.correctIndex]);
+
+            // DOM: سؤال
+            questionEl.innerHTML = `<img src="${q.questionImage}" alt="سؤال ${q.id}">`;
+
+            // DOM: خيارات
+            const optionsHTML = shuffledOptions.map((opt, idx) => {
+                return `<li onclick="checkAnswer(${idx === currentCorrectIndex})" class="${disabledOptions.includes(idx) ? 'disabled-option' : ''}">
+                    <img src="${opt}" alt="إجابة ${idx+1}">
+                </li>`;
+            }).join('');
+            optionsEl.innerHTML = optionsHTML;
+
+            // تحديث التقدم والموقت
+            updateProgress();
+            questionStartTime = Date.now();
+            startTimer();
+
+            // تشغيل صوت التفكير (مرّتين: مرّة بعد تفاعل المستخدم، وإلا لن يشغل)
+            const playThinkingIfPossible = () => safePlayAudio(thinking);
+            // إذا كان الصوت مُمكّن، شغّله فوراً؛ وإلا انتظر أول تفاعل
+            if (audioUnlocked) playThinkingIfPossible();
+            else {
+                // نضيف مستمع مرة واحدة لتمكين الصوت وتشغيله
+                document.body.addEventListener('pointerdown', function once() {
+                    audioUnlocked = true;
+                    playThinkingIfPossible();
+                    document.body.removeEventListener('pointerdown', once);
+                }, { once: true });
+            }
+        }
+
+        /* ===== وظيفة التحقق من الإجابة =====
+           isCorrect: boolean
+           timedOut: boolean (إذا كانت النتيجة بسبب انتهاء الوقت)
+        */
+        function checkAnswer(isCorrect, timedOut = false) {
+            clearInterval(timerInterval);
+            const messageBox = messageEl;
+            messageBox.style.display = "block";
+            if (isCorrect) {
+                messageBox.innerHTML = '<span class="correct">✔ إجابة صحيحة!</span>';
+                // حساب النقاط: زمن الإجابة
+                const answerTime = Math.floor((Date.now() - questionStartTime) / 1000);
+                const currentScore = parseFloat(localStorage.getItem('quizScore')) || START_SCORE;
+                const pointsToAdd = (answerTime <= FAST_THRESHOLD) ? 2 : 1;
+                localStorage.setItem('quizScore', (currentScore + pointsToAdd).toFixed(1));
+                safePlayAudio(document.getElementById('correct-sound'));
+            } else {
+                // لو انتهى الوقت أو إجابة خاطئة
+                messageBox.innerHTML = '<span class="wrong">✖ إجابة خاطئة!</span>';
+                safePlayAudio(document.getElementById('wrong-sound'));
+            }
+
+            updateScoreDisplay();
+
+            // ننتقل للسؤال التالي بعد 1.8 ثانية
+            setTimeout(() => {
+                messageBox.style.display = "none";
+                currentQuestion++;
+                if (currentQuestion < questions.length) {
+                    loadQuestion();
+                } else {
+                    endGame();
+                }
+            }, 1800);
+        }
+
+        /* ===== نهاية اللعبة وعرض النتيجة وشاشة التهنئة ===== */
+        function endGame() {
+            // لا نمسح usedQuestions — نحتفظ بها كي لا تتكرر الأسئلة عبر الجولات بسهولة
+            const finalScore = parseFloat(localStorage.getItem('quizScore')) || START_SCORE;
+            const endTime = Date.now();
+            const totalTime = Math.floor((endTime - gameStartTime) / 1000);
+
+            // اسم اللاعب
+            const playerName = prompt("🎉 أدخل اسمك لحفظ نتيجتك:", localStorage.getItem('lastPlayerName') || "لاعب");
+            if (playerName) {
+                localStorage.setItem('lastPlayerName', playerName);
+                updateLeaderboard(playerName.trim() || "لاعب", finalScore, totalTime);
+            }
+
+            // حساب الدرجة المئوية أو عرض النتيجة
+            const messageHtml = `
+                <h2 style="color:#2c3e50;">انتهت المسابقة!</h2>
+                <p>🎉 <strong>أحسنت!</strong> لقد حصلت على <strong>${finalScore}</strong> من 25 نقطة!</p>
+                <p>الوقت الكلي: <strong>${totalTime}</strong> ثانية</p>
+                <div style="margin-top:14px;">
+                    <button onclick="restartGame()" style="background:#2ecc71; color:white; border:none; padding:10px 18px; border-radius:8px; font-size:16px; cursor:pointer; margin:5px;">
+                        إعادة المحاولة
+                    </button>
+                    <button onclick="showLeaderboard()" style="background:#3498db; color:white; border:none; padding:10px 18px; border-radius:8px; font-size:16px; cursor:pointer; margin:5px;">
+                        عرض المتصدرين
+                    </button>
+                </div>
+            `;
+            document.getElementById('question').innerHTML = messageHtml;
+            document.getElementById('options').innerHTML = "";
+        }
+
+        function restartGame() {
+            // نعيد تحميل الصفحة أو نهيئ اللعبة من جديد
+            // إعادة تعيين الأسئلة للجولة الحالية فقط مع احترام usedQuestions
+            initGame();
+        }
+
+        /* ===== تحديث المتصدرين (Leaderboard) ===== */
+        function updateLeaderboard(name, score, time) {
+            let players = JSON.parse(localStorage.getItem('mathQuizLeaderboard')) || [];
+            name = name.trim() || "لاعب مجهول";
+            const existingIndex = players.findIndex(p => p.name === name);
+
+            if (existingIndex !== -1) {
+                const p = players[existingIndex];
+                // نحدّث إذا تحسنت النتيجة (أو الوقت أفضل عند تساوي النقاط)
+                if (score > p.score || (score === p.score && time < p.time)) {
+                    p.score = score;
+                    p.time = time;
+                    p.date = new Date().toLocaleDateString('ar-EG');
+                }
+                p.attempts = (p.attempts || 1) + 1;
+                p.lastAttempt = new Date().toLocaleString('ar-EG');
+            } else {
+                players.push({
+                    name: name,
+                    score: score,
+                    time: time,
+                    date: new Date().toLocaleDateString('ar-EG'),
+                    attempts: 1,
+                    lastAttempt: new Date().toLocaleString('ar-EG')
+                });
+            }
+
+            players.sort((a, b) => b.score - a.score || a.time - b.time);
+            localStorage.setItem('mathQuizLeaderboard', JSON.stringify(players.slice(0, 10)));
+
+            // عمل نسخة احتياطية بسيطة (نحتفظ بالنص في localStorage)
+            const backupData = { leaderboard: players.slice(0, 10), lastUpdate: new Date().toISOString() };
+            localStorage.setItem('leaderboardBackup', JSON.stringify(backupData));
+        }
+
+        function showLeaderboard() {
+            let players = JSON.parse(localStorage.getItem('mathQuizLeaderboard')) || [];
+            if (!players || players.length === 0) {
+                // جرب استعادة النسخة الاحتياطية
+                const backup = JSON.parse(localStorage.getItem('leaderboardBackup') || '{}');
+                players = (backup && backup.leaderboard) ? backup.leaderboard : [];
+            }
+            displayLeaderboard(players);
+        }
+
+        function displayLeaderboard(players) {
+            let html = `
+                <div style="max-width:100%; overflow:auto;">
+                    <h2 style="color:#f39c12; text-align:center; margin-bottom:10px;">أفضل 10 لاعبين</h2>
+                    <table style="width:100%; border-collapse:collapse; margin:0 auto;">
+                        <tr style="background:#34495e; color:white;">
+                            <th style="padding:10px; text-align:center;">الترتيب</th>
+                            <th style="padding:10px; text-align:right;">الاسم</th>
+                            <th style="padding:10px; text-align:center;">النقاط</th>
+                            <th style="padding:10px; text-align:center;">الوقت</th>
+                            <th style="padding:10px; text-align:center;">المحاولات</th>
+                        </tr>
+            `;
+            if (!players || players.length === 0) {
+                html += `<tr><td colspan="5" style="text-align:center; padding:18px; font-size:16px;">لا توجد نتائج مسجلة بعد!</td></tr>`;
+            } else {
+                players.forEach((player, idx) => {
+                    let medal = "";
+                    if (idx === 0) medal = "🥇";
+                    else if (idx === 1) medal = "🥈";
+                    else if (idx === 2) medal = "🥉";
+                    html += `
+                        <tr style="border-bottom:1px solid #eee; ${idx % 2 === 0 ? 'background: rgba(255,255,255,0.04);' : ''}">
+                            <td style="padding:10px; text-align:center; vertical-align:middle;">${medal} ${idx+1}</td>
+                            <td style="padding:10px; text-align:right; vertical-align:middle;">${player.name}</td>
+                            <td style="padding:10px; text-align:center; vertical-align:middle;">${player.score}</td>
+                            <td style="padding:10px; text-align:center; vertical-align:middle;">${player.time} ث</td>
+                            <td style="padding:10px; text-align:center; vertical-align:middle;">${player.attempts || 1}</td>
+                        </tr>
+                    `;
+                });
+            }
+            html += `
+                    </table>
+                    <button onclick="document.getElementById('message').style.display='none'" 
+                        style="display:block; margin:12px auto 0; padding:8px 18px; background:#e74c3c; color:white; border:none; border-radius:8px; font-size:15px; cursor:pointer;">
+                        إغلاق
+                    </button>
+                </div>
+            `;
+            messageEl.innerHTML = html;
+            messageEl.style.display = "block";
+        }
+
+        /* ====== 50/50 ====== */
+        function useFiftyFifty() {
+            const currentScore = parseFloat(localStorage.getItem('quizScore')) || START_SCORE;
+            if (helpUsed) {
+                alert("لقد استخدمت المساعدة بالفعل في هذا السؤال!");
+                return;
+            }
+            if (currentScore < FIFTY_COST) {
+                alert("ليس لديك نقاط كافية لاستخدام المساعدة!");
+                return;
+            }
+
+            // اختر 2 من الخيارات الخاطئة المعروضة وقم بتعطيلها
+            const incorrectOptions = Array.from(optionsEl.querySelectorAll('li img'))
+                .map((img, idx) => ({src: img.src, idx}))
+                .filter(o => !currentShuffledOptions[currentCorrectIndex] || !o.src.includes(currentShuffledOptions[currentCorrectIndex]));
+
+            const toDisable = shuffleArray(incorrectOptions).slice(0, 2);
+            toDisable.forEach(it => {
+                const li = optionsEl.querySelectorAll('li')[it.idx];
+                if (li) {
+                    li.classList.add('disabled-option');
+                    disabledOptions.push(it.idx);
+                }
+            });
+
+            // خصم النقاط
+            localStorage.setItem('quizScore', (currentScore - FIFTY_COST).toFixed(1));
+            updateScoreDisplay();
+            helpUsed = true;
+            fiftyBtn.disabled = true;
+            helpMessageEl.textContent = "تم خصم 0.5 نقطة";
+        }
+
+        /* ====== تخطي السؤال ====== */
+        function skipQuestion() {
+            const currentScore = parseFloat(localStorage.getItem('quizScore')) || START_SCORE;
+            if (currentScore < SKIP_COST) {
+                alert("ليس لديك نقاط كافية لتخطي السؤال!");
+                return;
+            }
+            if (!confirm("هل تريد تخطي هذا السؤال؟ (سيتم خصم 0.5 نقطة)")) return;
+
+            // خصم النقاط
+            localStorage.setItem('quizScore', (currentScore - SKIP_COST).toFixed(1));
+            updateScoreDisplay();
+
+            // احصل على سؤال بديل من availableQuestions إذا كان متاحًا
+            if (availableQuestions.length > 0) {
+                const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+                const newQ = availableQuestions[randomIndex];
+
+                // نضع هذه السؤال في مكان السؤال الحالي
+                questions[currentQuestion] = newQ;
+
+                // نضيفها إلى usedQuestions في التخزين حتى لا تتكرر مستقبلاً
+                const used = JSON.parse(localStorage.getItem('usedQuestions')) || [];
+                used.push(newQ.id);
+                localStorage.setItem('usedQuestions', JSON.stringify(used));
+
+                // إزالة من availableQuestions
+                availableQuestions.splice(randomIndex, 1);
+
+                // إعادة تحميل نفس الموضع بسؤال جديد
+                loadQuestion();
+            } else {
+                // لا توجد أسئلة بديلة — ننهي الجولة
+                endGame();
+            }
+        }
+
+        /* ====== تحديث عرض النقاط ====== */
+        function updateScoreDisplay() {
+            const s = parseFloat(localStorage.getItem('quizScore')) || START_SCORE;
+            scoreEl.textContent = `النقاط: ${s.toFixed(1)}`;
+        }
+
+        /* ====== مساعد لتشغيل الصوت بأمان (بعد تفاعل المستخدم) ====== */
+        function safePlayAudio(audioEl) {
+            if (!audioEl) return;
+            if (audioUnlocked) {
+                try { audioEl.currentTime = 0; audioEl.play(); } catch (e) { /* ignore */ }
+            } else {
+                // نؤمن تشغيله عند أول تفاعل
+                const initPlay = () => {
+                    audioUnlocked = true;
+                    try { audioEl.currentTime = 0; audioEl.play(); } catch (e) {}
+                    document.body.removeEventListener('pointerdown', initPlay);
+                };
+                document.body.addEventListener('pointerdown', initPlay, { once: true });
+            }
+        }
+
+        /* ====== تحميل الصفحة وبدء اللعبة ====== */
+        window.onload = function() {
+            // اذا كانت هناك نسخة احتياطية للمتصدرين غير محفوظة كمصفوفة: احتفظ بها
+            try {
+                const backup = localStorage.getItem('leaderboardBackup');
+                if (backup && typeof backup === 'string') {
+                    // leave as-is
+                }
+            } catch (e) {}
+
+            // تأكد من تهيئة availableQuestions من التخزين
+            loadAvailableQuestionsFromStorage();
+
+            // إعداد البداية
+            initGame();
+        };
+
+        // expose some functions للزر onclick في html
+        window.useFiftyFifty = useFiftyFifty;
+        window.skipQuestion = skipQuestion;
+        window.showLeaderboard = showLeaderboard;
+        window.restartGame = restartGame;
+    </script>
+</body>
+</html>
